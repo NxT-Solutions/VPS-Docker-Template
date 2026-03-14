@@ -1,0 +1,47 @@
+---
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run Gitleaks
+        run: |
+          docker run --rm -v "$PWD":/repo zricethezav/gitleaks:v8.24.0 \
+            detect --source=/repo --no-git --verbose
+
+  misconfig:
+    name: Misconfiguration Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run Checkov
+        run: |
+          docker run --rm -v "$PWD":/repo bridgecrew/checkov:3.2.469 \
+            --directory /repo --quiet

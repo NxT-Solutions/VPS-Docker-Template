@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# shellcheck source=../scripts/lib/common.sh
+# shellcheck source=scripts/lib/common.sh
 source "$REPO_ROOT/scripts/lib/common.sh"
 
 SELF_PATH="$SCRIPT_DIR/setup-vps.sh"
@@ -17,7 +17,7 @@ OS_VERSION_ID=""
 OS_CODENAME=""
 
 usage() {
-  cat <<EOF
+  cat << EOF
 Usage: $SELF_PATH [--config /absolute/or/relative/path/to/server.env]
 
 Bootstraps an Ubuntu 24.04 VPS with Docker, Caddy, Dozzle, and the sample app.
@@ -32,7 +32,7 @@ parse_args() {
         CONFIG_FILE="$(resolve_path "$2" "$PWD")"
         shift 2
         ;;
-      -h|--help)
+      -h | --help)
         usage
         exit 0
         ;;
@@ -48,7 +48,7 @@ ensure_root() {
     return 0
   fi
 
-  if ! command -v sudo >/dev/null 2>&1; then
+  if ! command -v sudo > /dev/null 2>&1; then
     die "Run this script as root or with sudo."
   fi
 
@@ -94,8 +94,6 @@ load_config() {
 validate_required_config() {
   local required_vars=(
     ACME_EMAIL
-    DOZZLE_DOMAIN
-    EXAMPLE_APP_DOMAIN
     BASIC_AUTH_USER
     BASIC_AUTH_PASSWORD
   )
@@ -145,7 +143,7 @@ install_docker() {
     chmod a+r /etc/apt/keyrings/docker.asc
   fi
 
-  cat >/etc/apt/sources.list.d/docker.list <<EOF
+  cat > /etc/apt/sources.list.d/docker.list << EOF
 deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${OS_CODENAME} stable
 EOF
 
@@ -192,7 +190,7 @@ configure_fail2ban() {
 
   log "Configuring fail2ban for SSH."
   install -d /etc/fail2ban/jail.d
-  cat >/etc/fail2ban/jail.d/99-vps-docker-template.local <<'EOF'
+  cat > /etc/fail2ban/jail.d/99-vps-docker-template.local << 'EOF'
 [sshd]
 enabled = true
 backend = systemd
@@ -213,7 +211,7 @@ configure_ssh_password_auth() {
 
   log "Disabling SSH password authentication."
   install -d /etc/ssh/sshd_config.d
-  cat >/etc/ssh/sshd_config.d/99-vps-docker-template.conf <<'EOF'
+  cat > /etc/ssh/sshd_config.d/99-vps-docker-template.conf << 'EOF'
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 ChallengeResponseAuthentication no
@@ -235,7 +233,7 @@ generate_basic_auth_hash() {
   hash_value="$(docker run --rm caddy:2-alpine caddy hash-password --plaintext "$BASIC_AUTH_PASSWORD" | tr -d '\r')"
   [[ -n "$hash_value" ]] || die "Failed to generate the shared basic-auth hash."
 
-  cat >"$RUNTIME_ENV_FILE" <<EOF
+  cat > "$RUNTIME_ENV_FILE" << EOF
 BASIC_AUTH_HASH='$hash_value'
 EOF
   chmod 600 "$RUNTIME_ENV_FILE"
@@ -244,13 +242,13 @@ EOF
 ensure_docker_network() {
   local network_name="$1"
 
-  if docker network inspect "$network_name" >/dev/null 2>&1; then
+  if docker network inspect "$network_name" > /dev/null 2>&1; then
     log "Docker network '$network_name' already exists."
     return 0
   fi
 
   log "Creating Docker network '$network_name'."
-  docker network create "$network_name" >/dev/null
+  docker network create "$network_name" > /dev/null
 }
 
 deploy_stack() {
@@ -287,55 +285,85 @@ run_compose() {
   )
 }
 
-check_example_app_route() {
-  local https_code
-  https_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --resolve "${EXAMPLE_APP_DOMAIN}:443:127.0.0.1" "https://${EXAMPLE_APP_DOMAIN}" || true)"
+trim_whitespace() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s\n' "$value"
+}
+
+extract_primary_hostname() {
+  local route_file="$1"
+  local route_line=""
+  local line=""
+
+  while IFS= read -r line; do
+    line="$(trim_whitespace "$line")"
+
+    if [[ -z "$line" || "$line" == \#* || "$line" == \(* ]]; then
+      continue
+    fi
+
+    if [[ "$line" == *"{" ]]; then
+      route_line="${line%%\{}"
+      break
+    fi
+  done < "$route_file"
+
+  route_line="$(trim_whitespace "$route_line")"
+  route_line="${route_line%%,*}"
+  route_line="$(trim_whitespace "$route_line")"
+
+  [[ -n "$route_line" ]] || die "Unable to determine a hostname from $route_file."
+  printf '%s\n' "$route_line"
+}
+
+check_route_file() {
+  local route_file="$1"
+  local auth_mode="${2:-none}"
+  local hostname=""
+  local https_code=""
+  local http_code=""
+
+  hostname="$(extract_primary_hostname "$route_file")"
+  log "Checking Caddy route for $hostname."
+
+  if [[ "$auth_mode" == "basic" ]]; then
+    https_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --user "${BASIC_AUTH_USER}:${BASIC_AUTH_PASSWORD}" --resolve "${hostname}:443:127.0.0.1" "https://${hostname}" || true)"
+  else
+    https_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --resolve "${hostname}:443:127.0.0.1" "https://${hostname}" || true)"
+  fi
 
   if [[ "$https_code" == "200" ]]; then
-    log "Verified the example app over HTTPS."
+    log "Verified ${hostname} over HTTPS."
     return 0
   fi
 
-  local http_code
-  http_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' -H "Host: ${EXAMPLE_APP_DOMAIN}" http://127.0.0.1/ || true)"
+  http_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' -H "Host: ${hostname}" http://127.0.0.1/ || true)"
 
   case "$http_code" in
-    301|308)
-      warn "The example app is reachable through Caddy, but HTTPS is not ready yet. This usually means DNS or certificate issuance is still in progress."
+    301 | 308)
+      warn "${hostname} is reachable through Caddy, but HTTPS is not ready yet. This usually means DNS or certificate issuance is still in progress."
       ;;
     *)
-      die "The example app route did not respond as expected. HTTPS status: ${https_code:-none}, HTTP status: ${http_code:-none}."
+      die "The route for ${hostname} did not respond as expected. HTTPS status: ${https_code:-none}, HTTP status: ${http_code:-none}."
       ;;
   esac
 }
 
+check_example_app_route() {
+  check_route_file "$REPO_ROOT/caddy/sites/example-app.caddy"
+}
+
 check_dozzle_route() {
-  local https_code
-  https_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --user "${BASIC_AUTH_USER}:${BASIC_AUTH_PASSWORD}" --resolve "${DOZZLE_DOMAIN}:443:127.0.0.1" "https://${DOZZLE_DOMAIN}" || true)"
-
-  if [[ "$https_code" == "200" ]]; then
-    log "Verified Dozzle over HTTPS."
-    return 0
-  fi
-
-  local http_code
-  http_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' -H "Host: ${DOZZLE_DOMAIN}" http://127.0.0.1/ || true)"
-
-  case "$http_code" in
-    301|308)
-      warn "Dozzle is reachable through Caddy, but HTTPS is not ready yet. This usually means DNS or certificate issuance is still in progress."
-      ;;
-    *)
-      die "The Dozzle route did not respond as expected. HTTPS status: ${https_code:-none}, HTTP status: ${http_code:-none}."
-      ;;
-  esac
+  check_route_file "$REPO_ROOT/caddy/sites/dozzle.caddy" basic
 }
 
 run_smoke_checks() {
   log "Running smoke checks."
-  docker info >/dev/null
-  docker network inspect web >/dev/null
-  docker network inspect internal >/dev/null
+  docker info > /dev/null
+  docker network inspect web > /dev/null
+  docker network inspect internal > /dev/null
 
   assert_running_service "$REPO_ROOT/example-app" example-app
   assert_running_service "$REPO_ROOT/dozzle" dozzle

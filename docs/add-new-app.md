@@ -161,8 +161,8 @@ Add:
 
 ```caddyfile
 crm.nxt-solutions.com {
-	encode zstd gzip
-	reverse_proxy crm:80
+  encode zstd gzip
+  reverse_proxy crm:80
 }
 ```
 
@@ -178,8 +178,8 @@ The route file can also use a completely different domain, for example:
 
 ```caddyfile
 crm.cheaper.promo {
-	encode zstd gzip
-	reverse_proxy crm:80
+  encode zstd gzip
+  reverse_proxy crm:80
 }
 ```
 
@@ -187,8 +187,8 @@ or:
 
 ```caddyfile
 maptoposter.com {
-	encode zstd gzip
-	reverse_proxy crm:80
+  encode zstd gzip
+  reverse_proxy crm:80
 }
 ```
 
@@ -237,8 +237,8 @@ If you want to protect a route with the same shared login, use:
 
 ```caddyfile
 crm.nxt-solutions.com {
-	import shared_basic_auth
-	reverse_proxy crm:80
+  import shared_basic_auth
+  reverse_proxy crm:80
 }
 ```
 
@@ -269,7 +269,7 @@ and in `caddy/sites/crm.caddy`:
 
 ```caddyfile
 crm.nxt-solutions.com {
-	reverse_proxy crm:3000
+  reverse_proxy crm:3000
 }
 ```
 

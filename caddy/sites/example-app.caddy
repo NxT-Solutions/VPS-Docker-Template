@@ -1,4 +1,5 @@
-{$EXAMPLE_APP_DOMAIN} {
+# Replace app.example.com with your real hostname before first deployment.
+app.example.com {
 	encode zstd gzip
 	reverse_proxy example-app:80
 }

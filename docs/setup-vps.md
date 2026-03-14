@@ -21,14 +21,16 @@ You need these 4 things:
 
 ## Very important: domain names vs server IP
 
-The config file uses **domain names**, not the raw server IP.
+Public hostnames now live in the files under:
 
-These hostnames do **not** need to be on the same base domain.
+- `caddy/sites/`
+
+Those hostnames do **not** need to be on the same base domain.
 
 Examples:
 
-- `DOZZLE_DOMAIN=dozzle.nxt-solutions.com`
-- `EXAMPLE_APP_DOMAIN=maptoposter.com`
+- `dozzle.nxt-solutions.com`
+- `maptoposter.com`
 
 Then in DNS, you point those names to your server IP:
 
@@ -37,10 +39,11 @@ Then in DNS, you point those names to your server IP:
 
 So the rule is:
 
-- Put **hostnames** in `config/server.env`
-- Point those hostnames to your VPS **IP address** in DNS
+- Put **hostnames** in `caddy/sites/*.caddy`
+- Put **server-wide settings** in `config/server.env`
+- Point the hostnames to your VPS **IP address** in DNS
 
-Do **not** put the raw IP directly in `DOZZLE_DOMAIN` or `EXAMPLE_APP_DOMAIN`.
+Do **not** put the raw IP directly in the Caddy route files.
 
 For the full routing model, including multiple domains and per-app route files, see:
 
@@ -85,11 +88,54 @@ cd VPS-Docker-Template
 
 If this repo is private, use the Git URL that works for your account.
 
-## Step 5. Create your DNS records
+## Step 5. Edit the starter Caddy route files
 
-Before running the setup, create DNS records for the subdomains you want to use.
+Before running the setup, choose the public hostnames you want to use for the starter services.
 
-Example if you want:
+Open the Dozzle route file:
+
+```bash
+nano caddy/sites/dozzle.caddy
+```
+
+Replace the placeholder hostname with your real one.
+
+Example:
+
+```caddyfile
+dozzle.nxt-solutions.com {
+  import shared_basic_auth
+
+  reverse_proxy dozzle:8080 {
+    flush_interval -1
+  }
+}
+```
+
+Then open the example app route file:
+
+```bash
+nano caddy/sites/example-app.caddy
+```
+
+Replace the placeholder hostname with your real one.
+
+Example:
+
+```caddyfile
+maptoposter.com {
+  encode zstd gzip
+  reverse_proxy example-app:80
+}
+```
+
+You can use different base domains for each file.
+
+## Step 6. Create your DNS records
+
+After choosing the hostnames in the route files, create DNS records that point them to the VPS.
+
+Example if you configured:
 
 - `dozzle.nxt-solutions.com`
 - `maptoposter.com`
@@ -111,7 +157,7 @@ That creates:
 
 If your provider also gives you IPv6 and you use it, you can also add matching `AAAA` records.
 
-## Step 6. Copy the example config
+## Step 7. Copy the example config
 
 Run:
 
@@ -119,7 +165,13 @@ Run:
 cp config/server.env.example config/server.env
 ```
 
-## Step 7. Edit the config file
+About the config files:
+
+- `config/server.env.example` is the file you copy and edit yourself
+- `config/runtime/caddy.env.example` shows the shape of the runtime file
+- `config/runtime/caddy.env` is generated automatically by the setup script
+
+## Step 8. Edit the config file
 
 Open the config file:
 
@@ -133,8 +185,6 @@ Example:
 
 ```env
 ACME_EMAIL=ops@nxt-solutions.com
-DOZZLE_DOMAIN=dozzle.nxt-solutions.com
-EXAMPLE_APP_DOMAIN=maptoposter.com
 BASIC_AUTH_USER=admin
 BASIC_AUTH_PASSWORD=use-a-long-random-password-here
 
@@ -147,8 +197,6 @@ ENABLE_FAIL2BAN=true
 What each value means:
 
 - `ACME_EMAIL`: email used by Caddy for HTTPS certificate registration
-- `DOZZLE_DOMAIN`: the hostname where you want to open the log viewer
-- `EXAMPLE_APP_DOMAIN`: the hostname for the sample app, on any domain you want
 - `BASIC_AUTH_USER`: shared username for any service routes protected with basic auth
 - `BASIC_AUTH_PASSWORD`: shared password for any service routes protected with basic auth
 - `TZ`: server timezone
@@ -156,7 +204,9 @@ What each value means:
 - `ENABLE_UFW`: enables the firewall
 - `ENABLE_FAIL2BAN`: enables fail2ban for SSH protection
 
-## Step 8. Make sure SSH key login works
+The public hostnames are **not** configured here anymore. They live in the files under `caddy/sites/`.
+
+## Step 9. Make sure SSH key login works
 
 This script can disable SSH password login for safety.
 
@@ -176,7 +226,7 @@ SSH_DISABLE_PASSWORD_AUTH=false
 
 You can harden SSH later after your key setup is confirmed.
 
-## Step 9. Run the setup script
+## Step 10. Run the setup script
 
 Run:
 
@@ -196,18 +246,18 @@ The script will:
 8. Start `example-app`, `dozzle`, and `caddy`
 9. Run smoke checks
 
-## Step 10. Wait for DNS and HTTPS
+## Step 11. Wait for DNS and HTTPS
 
 If your DNS was just created, HTTPS may take a little time to become fully ready.
 
 This is normal. Caddy needs the domain to point to the server so it can request the certificate.
 
-## Step 11. Open the URLs in your browser
+## Step 12. Open the URLs in your browser
 
 Open:
 
-- `https://maptoposter.com` if that is your `EXAMPLE_APP_DOMAIN`
-- `https://dozzle.nxt-solutions.com` if that is your `DOZZLE_DOMAIN`
+- the hostname you put in `caddy/sites/example-app.caddy`, for example `https://maptoposter.com`
+- the hostname you put in `caddy/sites/dozzle.caddy`, for example `https://dozzle.nxt-solutions.com`
 
 Expected result:
 
@@ -232,7 +282,7 @@ This is helpful to know before you run it:
 
 Check that:
 
-- the domain in `config/server.env` is correct
+- the hostname in the matching file under `caddy/sites/` is correct
 - the DNS record points to the correct VPS IP
 - you waited long enough for DNS to propagate
 
@@ -266,8 +316,8 @@ sudo ./bin/setup-vps.sh --config ./config/server.env
 
 One valid setup is:
 
-- `DOZZLE_DOMAIN=dozzle.nxt-solutions.com`
-- `EXAMPLE_APP_DOMAIN=maptoposter.com`
+- `caddy/sites/dozzle.caddy` -> `dozzle.nxt-solutions.com`
+- `caddy/sites/example-app.caddy` -> `maptoposter.com`
 
 And in DNS:
 
