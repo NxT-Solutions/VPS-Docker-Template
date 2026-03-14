@@ -7,8 +7,6 @@ services:
       - ../config/runtime/caddy.env
     environment:
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
-      DOZZLE_DOMAIN: ${DOZZLE_DOMAIN:?DOZZLE_DOMAIN is required}
-      EXAMPLE_APP_DOMAIN: ${EXAMPLE_APP_DOMAIN:?EXAMPLE_APP_DOMAIN is required}
       BASIC_AUTH_USER: ${BASIC_AUTH_USER:?BASIC_AUTH_USER is required}
     ports:
       - "80:80"

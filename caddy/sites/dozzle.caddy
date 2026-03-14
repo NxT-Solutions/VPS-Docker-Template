@@ -1,4 +1,5 @@
-{$DOZZLE_DOMAIN} {
+# Replace dozzle.example.com with your real hostname before first deployment.
+dozzle.example.com {
 	import shared_basic_auth
 
 	reverse_proxy dozzle:8080 {

@@ -45,11 +45,13 @@ If the hostname does not point to the VPS, Caddy cannot serve it and cannot requ
 
 The routing setup is:
 
+- `config/server.env`: server-wide settings such as ACME email and shared auth
 - `caddy/Caddyfile`: global Caddy config and shared snippets
 - `caddy/sites/*.caddy`: one route file per public app or service
 
 This means:
 
+- server-wide settings stay in one place
 - you do not need to keep editing one giant Caddy config
 - every app can have its own small route file
 - different projects can use totally different domains
@@ -61,7 +63,7 @@ This repo already ships with:
 - `caddy/sites/dozzle.caddy`
 - `caddy/sites/example-app.caddy`
 
-Those are just examples. Future apps should follow the same pattern.
+Those are just starter examples. You should edit their placeholder hostnames before first deployment.
 
 ## Route file pattern
 
@@ -81,8 +83,8 @@ Example:
 
 ```caddyfile
 crm.nxt-solutions.com {
-	encode zstd gzip
-	reverse_proxy crm:80
+  encode zstd gzip
+  reverse_proxy crm:80
 }
 ```
 
@@ -90,8 +92,8 @@ crm.nxt-solutions.com {
 
 ```caddyfile
 admin.cheaper.promo {
-	encode zstd gzip
-	reverse_proxy admin:3000
+  encode zstd gzip
+  reverse_proxy admin:3000
 }
 ```
 
@@ -99,8 +101,8 @@ admin.cheaper.promo {
 
 ```caddyfile
 maptoposter.com {
-	encode zstd gzip
-	reverse_proxy maptoposter:8080
+  encode zstd gzip
+  reverse_proxy maptoposter:8080
 }
 ```
 
@@ -108,8 +110,8 @@ maptoposter.com {
 
 ```caddyfile
 api.maptoposter.com {
-	encode zstd gzip
-	reverse_proxy maptoposter-api:8080
+  encode zstd gzip
+  reverse_proxy maptoposter-api:8080
 }
 ```
 
@@ -119,7 +121,7 @@ In a route like this:
 
 ```caddyfile
 crm.nxt-solutions.com {
-	reverse_proxy crm:80
+  reverse_proxy crm:80
 }
 ```
 
@@ -165,12 +167,29 @@ If you want to protect a route, use:
 
 ```caddyfile
 admin.cheaper.promo {
-	import shared_basic_auth
-	reverse_proxy admin:3000
+  import shared_basic_auth
+  reverse_proxy admin:3000
 }
 ```
 
 That reuses the same basic-auth login across any protected routes.
+
+## What belongs where
+
+Use `config/server.env` for:
+
+- `ACME_EMAIL`
+- `BASIC_AUTH_USER`
+- `BASIC_AUTH_PASSWORD`
+- timezone and server-hardening toggles
+
+Use `caddy/sites/*.caddy` for:
+
+- public hostnames
+- which upstream container a hostname should reach
+- whether a route should use shared basic auth
+
+This keeps server-wide settings separate from app-specific routing.
 
 ## How to add a new hostname
 
@@ -212,7 +231,7 @@ Do not do this:
 
 ```caddyfile
 1.2.3.4 {
-	reverse_proxy crm:80
+  reverse_proxy crm:80
 }
 ```
 

@@ -3,6 +3,7 @@
 /config/server.env
 /config/runtime/*
 !/config/runtime/.gitkeep
+!/config/runtime/*.example
 
 /caddy/data/*
 !/caddy/data/.gitkeep
