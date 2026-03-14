@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VPS Docker Template</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe6;
+        --paper: #fffaf3;
+        --ink: #11212d;
+        --muted: #5b6b75;
+        --accent: #cc5a2f;
+        --accent-soft: #f7d8c6;
+        --border: #d8c9b8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Georgia", "Times New Roman", serif;
+        background:
+          radial-gradient(circle at top left, rgba(204, 90, 47, 0.14), transparent 35%),
+          linear-gradient(135deg, var(--bg), #e7efe9);
+        color: var(--ink);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      main {
+        width: min(720px, 100%);
+        background: rgba(255, 250, 243, 0.92);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 32px;
+        box-shadow: 0 22px 60px rgba(17, 33, 45, 0.12);
+      }
+
+      p {
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .eyebrow {
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.8rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        font-size: clamp(2.4rem, 5vw, 4rem);
+        line-height: 1.05;
+        margin: 18px 0 14px;
+      }
+
+      ul {
+        padding-left: 20px;
+        color: var(--ink);
+      }
+
+      li + li {
+        margin-top: 10px;
+      }
+
+      code {
+        font-family: "SFMono-Regular", "Menlo", monospace;
+        background: rgba(17, 33, 45, 0.08);
+        border-radius: 6px;
+        padding: 0.15rem 0.35rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="eyebrow">Example Stack</span>
+      <h1>Your VPS template is alive.</h1>
+      <p>
+        This sample app proves the routing pattern for future projects:
+        keep the app private on Docker networks, give it a stable alias,
+        and let Caddy handle the public entrypoint.
+      </p>
+      <ul>
+        <li>Public traffic terminates at Caddy on ports <code>80</code> and <code>443</code>.</li>
+        <li>Internal services share the external Docker networks <code>web</code> and <code>internal</code>.</li>
+        <li>New projects can copy this folder and replace the image, volumes, and upstream domain.</li>
+      </ul>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+{$EXAMPLE_APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy example-app:80
+}

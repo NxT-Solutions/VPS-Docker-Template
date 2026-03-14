@@ -1,0 +1,7 @@
+{$DOZZLE_DOMAIN} {
+	import shared_basic_auth
+
+	reverse_proxy dozzle:8080 {
+		flush_interval -1
+	}
+}
