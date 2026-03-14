@@ -30,7 +30,15 @@ If you want to understand how multiple domains work on one VPS, use:
 ## Repo References
 
 - `config/server.env.example`: example server config
+- `config/runtime/caddy.env.example`: example of the generated runtime auth file
 - `bin/setup-vps.sh`: VPS bootstrap script
+- `config/server.env`: server-wide settings when you create it locally on a VPS
 - `caddy/Caddyfile`: global Caddy config and shared snippets
 - `caddy/sites/`: one route file per public app or service
 - `example-app/`: starter app pattern for future projects
+
+## CI And Quality Gates
+
+- `.github/workflows/quality.yml`: shell, Markdown, YAML, workflow, and formatting checks
+- `.github/workflows/template-validation.yml`: Docker Compose and Caddy configuration validation
+- `.github/workflows/security.yml`: secret scanning and misconfiguration scanning

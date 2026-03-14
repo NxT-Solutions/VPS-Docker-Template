@@ -1,0 +1,49 @@
+---
+name: Template Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Compose And Caddy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Prepare Runtime Configuration
+        run: |
+          cp config/server.env.example config/server.env
+          cat > config/runtime/caddy.env <<'EOF'
+          BASIC_AUTH_HASH='$2a$14$abcdefghijklmnopqrstuvabcdefghijklmnopqrstuvabcdefghijklmn'
+          EOF
+
+      - name: Create Expected Docker Networks
+        run: |
+          docker network inspect web >/dev/null 2>&1 || docker network create web
+          docker network inspect internal >/dev/null 2>&1 || docker network create internal
+
+      - name: Validate Docker Compose Files
+        run: |
+          docker compose --env-file config/server.env -f caddy/compose.yaml config
+          docker compose -f dozzle/compose.yaml config
+          docker compose -f example-app/compose.yaml config
+
+      - name: Validate Caddy Configuration
+        run: |
+          docker compose --env-file config/server.env -f caddy/compose.yaml run --rm \
+            caddy caddy validate --config /etc/caddy/Caddyfile

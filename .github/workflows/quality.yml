@@ -1,0 +1,86 @@
+---
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint And Style Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install Lint Tooling
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y shellcheck yamllint
+
+          npm install --global markdownlint-cli@0.45.0
+
+          curl -fsSL \
+            https://github.com/mvdan/sh/releases/download/v3.10.0/shfmt_v3.10.0_linux_amd64 \
+            -o /tmp/shfmt
+          sudo install -m 0755 /tmp/shfmt /usr/local/bin/shfmt
+
+          curl -fsSL \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz \
+            -o /tmp/actionlint.tar.gz
+          sudo tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint
+
+      - name: Check EditorConfig Compliance
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          failed = False
+          for path in Path(".").rglob("*"):
+              if not path.is_file():
+                  continue
+              if ".git" in path.parts:
+                  continue
+              if path.stat().st_size == 0:
+                  continue
+              data = path.read_bytes()
+              if b"\r\n" in data:
+                  print(f"CRLF line endings found: {path}")
+                  failed = True
+              if not data.endswith(b"\n"):
+                  print(f"Missing trailing newline: {path}")
+                  failed = True
+          raise SystemExit(1 if failed else 0)
+          PY
+
+      - name: Check Shell Syntax
+        run: bash -n bin/setup-vps.sh scripts/lib/common.sh
+
+      - name: Lint Shell Scripts
+        run: shellcheck -P . -x bin/setup-vps.sh scripts/lib/common.sh
+
+      - name: Check Shell Formatting
+        run: shfmt -d -i 2 -ci -sr bin/setup-vps.sh scripts/lib/common.sh
+
+      - name: Lint YAML
+        run: yamllint .
+
+      - name: Lint Markdown
+        run: find . -name '*.md' -not -path './.git/*' -print0 | xargs -0 markdownlint
+
+      - name: Lint GitHub Actions Workflows
+        run: actionlint -color

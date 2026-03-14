@@ -15,10 +15,10 @@ die() {
 
 bool_enabled() {
   case "${1:-}" in
-    1|true|TRUE|yes|YES|on|ON)
+    1 | true | TRUE | yes | YES | on | ON)
       return 0
       ;;
-    0|false|FALSE|no|NO|off|OFF|'')
+    0 | false | FALSE | no | NO | off | OFF | '')
       return 1
       ;;
     *)
