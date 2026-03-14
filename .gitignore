@@ -1,0 +1,16 @@
+.DS_Store
+
+/config/server.env
+/config/runtime/*
+!/config/runtime/.gitkeep
+
+/caddy/data/*
+!/caddy/data/.gitkeep
+/caddy/config/*
+!/caddy/config/.gitkeep
+
+/dozzle/data/*
+!/dozzle/data/.gitkeep
+
+*/logs/*
+!*/logs/.gitkeep
